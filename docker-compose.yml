@@ -1,0 +1,56 @@
+# 根据开源的工具自己修改的compose,用于生产环境，拉取数据库镜像
+version: '3'
+services:
+  mongo:
+    image: registry.cn-shanghai.aliyuncs.com/comfy-ai/mongo-aliyun:latest
+    container_name: mongodb
+    restart: always
+    # 生产环境建议不要暴露
+    ports:
+      - "27017:27017"
+    networks:
+      comfyai:
+        ipv4_address: 172.20.0.3
+    environment:
+      # 这里的配置只有首次运行生效。修改后，重启镜像是不会生效的。需要把持久化数据删除再重启，才有效果
+      - MONGO_INITDB_ROOT_USERNAME=username
+      - MONGO_INITDB_ROOT_PASSWORD=password
+    volumes:
+      - /usr/mongo/data:/data/db
+  #  大预言模型数据库
+  mysql:
+    #阿里云镜像加速
+    image: registry.cn-shanghai.aliyuncs.com/comfy-ai/mysql-aliyun:latest
+    container_name: mysqldb
+    restart: always
+    ports:
+      - "3306:3306"
+    networks:
+      comfyai:
+        ipv4_address: 172.20.0.2
+    environment:
+      - MYSQL_ROOT_PASSWORD=test123
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - /usr/mysql/log:/var/log/mysql
+      - /usr/mysql/data:/var/lib/mysql
+      - /usr/mysql/conf:/etc/mysql/conf.d
+  #    command: bash -c "mysqld --init-file=/docker-entrypoint-initdb.d/init.sql"
+  redis:
+    image: registry.cn-shanghai.aliyuncs.com/comfy-ai/redis-aliyun:latest
+    container_name: redisdb
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      comfyai:
+        ipv4_address: 172.20.0.4
+networks:
+  comfyai:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+
+
